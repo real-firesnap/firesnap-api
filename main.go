@@ -27,9 +27,14 @@ func main() {
     app.Post("/api/auth/signup", routes.SignUp)
 	app.Post("/api/auth/login", routes.Login)
 
+	app.Get("/api/users/:username/posts", routes.GetPosts)
+
 	app.Use(jwtware.New(jwtware.Config{
 		SigningKey: jwtware.SigningKey{Key: []byte(os.Getenv("JWT_SECRET"))},
 	}))
+
+	app.Post("/api/users/me/posts", routes.CreatePost)
+	app.Delete("/api/users/me/posts/:postID", routes.DeletePost)
 
     log.Fatal(app.Listen(":8080"))
 }
