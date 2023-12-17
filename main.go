@@ -6,6 +6,7 @@ import (
 
 	jwtware "github.com/gofiber/contrib/jwt"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/joho/godotenv"
 	"github.com/real-firesnap/firesnap-api/db"
 	"github.com/real-firesnap/firesnap-api/routes"
@@ -24,7 +25,11 @@ func init() {
 func main() {
 	app := fiber.New()
 
-    app.Post("/api/auth/signup", routes.SignUp)
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "http://localhost:3000",
+	}))
+
+	app.Post("/api/auth/signup", routes.SignUp)
 	app.Post("/api/auth/login", routes.Login)
 
 	app.Get("/api/users/:username/posts", routes.GetPosts)
@@ -36,5 +41,5 @@ func main() {
 	app.Post("/api/users/me/posts", routes.CreatePost)
 	app.Delete("/api/users/me/posts/:postID", routes.DeletePost)
 
-    log.Fatal(app.Listen(":8080"))
+	log.Fatal(app.Listen(":8080"))
 }

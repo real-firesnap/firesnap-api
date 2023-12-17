@@ -13,6 +13,10 @@ import (
 
 var matchUsername = regexp.MustCompile(`^[a-zA-Z0-9\-_]{3,15}$`).MatchString
 
+func matchName(name string) bool {
+	return utf8.RuneCountInString(name) > 3 && utf8.RuneCountInString(name) < 30
+}
+
 func matchPassword(password string) bool {
 	return utf8.RuneCountInString(password) >= 6
 }
@@ -20,6 +24,7 @@ func matchPassword(password string) bool {
 func SignUp(c *fiber.Ctx) error {
 	var body struct {
 		Username string
+		Name     string
 		Password string
 	}
 	if err := c.BodyParser(&body); err != nil {
@@ -30,6 +35,10 @@ func SignUp(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusUnprocessableEntity, "BAD_USERNAME")
 	}
 
+	if !matchName(body.Name) {
+		return fiber.NewError(fiber.StatusUnprocessableEntity, "BAD_NAME")
+	}
+
 	if !matchPassword(body.Password) {
 		return fiber.NewError(fiber.StatusUnprocessableEntity, "BAD_PASSWORD")
 	}
@@ -38,7 +47,7 @@ func SignUp(c *fiber.Ctx) error {
 	db.DB.First(&user, "username = ?", body.Username)
 
 	if user.ID != 0 {
-		return fiber.NewError(fiber.StatusUnprocessableEntity, "USERNAME_TAKEN")
+		return fiber.ErrConflict
 	}
 
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(body.Password), bcrypt.DefaultCost)
@@ -46,10 +55,12 @@ func SignUp(c *fiber.Ctx) error {
 		return err
 	}
 
-	db.DB.Create(&models.User{
+	newUser := &models.User{
 		Username: body.Username,
+		Name: body.Name,
 		Password: string(passwordHash),
-	})
+	}
+	db.DB.Create(&newUser)
 
 	token, err := utils.GetToken(body.Username)
 	if err != nil {
@@ -57,6 +68,7 @@ func SignUp(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
+		"id":    newUser.ID,
 		"token": token,
 	})
 }
